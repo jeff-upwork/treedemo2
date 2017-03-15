@@ -1,4 +1,4 @@
-<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="DnDSaveDB.aspx.cs" Inherits="ASTreeViewDemo.DnDSaveDB" EnableEventValidation="false" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="DnDMediaMode.aspx.cs" Inherits="ASTreeViewDemo.DnDMediaMode" %>
 <%@ Register Assembly="Goldtect.ASTreeView" Namespace="Goldtect" TagPrefix="astv" %>
 <%@ Register Assembly="AjaxControlToolkit" Namespace="AjaxControlToolkit" TagPrefix="cc1" %>
 
@@ -60,11 +60,35 @@
             imgDisplay.src = document.getElementById("<%#lblRoot.ClientID%>").value + "/" + args.get_fileName();
         }
 
-        function nodeSelectHandler2(elem) {
-            var nodeAdditionalAttr = JSON.parse(elem.parentNode.getAttribute("additional-attributes"));
-            document.getElementById("<%#tbItem2.ClientID%>").value = nodeAdditionalAttr.LongText;
-            document.getElementById("<%#lblRoot2.ClientID%>").value = elem.parentNode.getAttribute("treeNodeValue");
+        function mediaSelectChange(ddl) {
+            var imgDisplay = $get("imgDisplay");
+            imgDisplay.style.cssText = "height:200px;width:200px";
+            imgDisplay.src = document.getElementById("<%#lblRoot.ClientID%>").value + "/" + ddl.value;
         }
+
+        function GetMedia(nodeID) {
+            $.ajax({
+                type: "POST",
+                url: "DnDMediaMode.aspx/GetMedia",
+                data: '{nodeID: ' + nodeID + '}',
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (r) {
+                    var lstMedia = $("[id*=lstMedia]");
+                    lstMedia.empty();
+                    $.each(r.d, function () {
+                        lstMedia.append($("<option></option>").val(this['Value']).html(this['Text']));
+                    });
+                },
+                failure: function (response) {
+                    alert('fail');
+                },
+                error: function (response) {
+                    alert('error');
+                }
+            });
+        }
+
     </script>
     
 </head>
@@ -73,7 +97,7 @@
     <form id="form1" runat="server">
         <div style="float:left;width:50%;">
             Hello <asp:Label runat="server" ID="lbUsername" /> (<a href="Default.aspx">logout</a>)
-            <a href="DnDMediaMode.aspx">switch to media mode</a>
+            <a href="DnDSaveDB.aspx">switch to tree mode</a>
         </div>
         <div style="text-align:right;float:left;">Share selected root node to : 
             <asp:TextBox ID="tbShare" runat="server" ToolTip="Enter a Username" Placeholder="Enter a Username" />
@@ -82,7 +106,7 @@
         </div>
     <div>
         <asp:Literal ID="lASTreeViewThemeCssFile" runat="server"></asp:Literal>
-        <asp:ScriptManager ID="sm" runat="server"></asp:ScriptManager>
+        <asp:ScriptManager ID="sm" runat=server></asp:ScriptManager>
        
         <asp:UpdatePanel ID="upPanel2" runat="server">
             <ContentTemplate>
@@ -101,8 +125,7 @@
                 <tr>
                     <th><h3><asp:Literal ID="aslTreeOne" runat="server" Text="TreeOne"></asp:Literal></h3></th>
                     <th>Selected Tree One Root : <asp:DropDownList runat="server" ID="ddlRoot1" DataValueField="ProductID" DataTextField="ProductName" OnSelectedIndexChanged="ddlRoot1_SelectedIndexChanged" AutoPostBack="true"></asp:DropDownList> </th>
-                    <th>Selected Tree Two Root : <asp:DropDownList runat="server" ID="ddlRoot2" DataValueField="ProductID" DataTextField="ProductName" OnSelectedIndexChanged="ddlRoot2_SelectedIndexChanged" AutoPostBack="true"></asp:DropDownList> </th>
-                    <th><h3><asp:Literal ID="Literal1" runat="server" Text="TreeTwo"></asp:Literal></h3></th>
+                    <th><h3>Media Pane</h3> </th>
                 </tr>
                 <tr valign="top">
                     <td >
@@ -126,6 +149,7 @@
                             />
                     </td>
                     <td  style="background-color:yellow"> 
+                         
                         <table width="100%" border="0">
                             <tr>
                                 <td>
@@ -143,40 +167,36 @@
                        
                     </td>
                     <td  style="background-color:cyan"> 
-                        <table width="100%" border="0">
-                            <tr>
-                                <td> Selected Right Node :</td>
-                            </tr>
-                            <tr>
-                                <td><asp:TextBox ID="tbItem2" runat="server" Text="" Rows="35" TextMode="multiline" Width="100%" /> </td>
-                            </tr>
-                            <tr>
-                                <td><asp:Button ID="btnUpdate2" runat="server" Text="Update selected right Node" OnClick="btnUpdat2_Click" />
-                        <asp:Button ID="btnAdd2" runat="server" Text="Add to bottom right tree" OnClick="btnAdd2_Click" /></td>
-                            </tr>
-                        </table>
-                        
-                        
-                       
-                    </td>
-                    <td >
+                        <img id = "imgDisplay" alt="" src="" style = "display:block"/><br />
+                                    <cc1:AsyncFileUpload  runat="server" ID="AsyncFileUpload1" OnClientUploadComplete="uploadComplete"
+    Width="400px" UploaderStyle="Modern" CompleteBackColor="White" UploadingBackColor="#CCFFFF"
+    ThrobberID="imgLoader" OnUploadedComplete="FileUploadComplete" />
+                                    <asp:Image ID="imgLoader" runat="server"  ImageUrl = "~/Images/loader.gif" /> 
+                                
+                                    <table>
+                                        <tr>
+                                            <td>
+                                                <asp:ListBox ID="lstMedia" runat="server" SelectionMode="Single" onchange="mediaSelectChange(this)"></asp:ListBox>
+                                            </td>
+                                            <td>
+                                                <asp:GridView ID="gvLink" runat="server" AutoGenerateColumns="false">
+                                                    <Columns>
+                                                        <asp:TemplateField HeaderText="Hyperlink">
+                                                            <ItemTemplate>
+                                                                <asp:HyperLink ID="HyperLink1" runat="server" 
+                                                                    NavigateUrl='<%# Eval("CODE", @"http://localhost/Test.aspx?code={0}") %>' 
+                                                                    Text='link to code'>
+                                                                </asp:HyperLink>
+                                                            </ItemTemplate>
+                                                        </asp:TemplateField>
+                                                    </Columns>
+                                                </asp:GridView>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
 
-                        <astv:ASTreeView ID="astvMyTree2" 
-                            runat="server"
-                            BasePath="~/Scripts/astreeview/"
-                            EnableRoot="true"
-                            EnableCheckbox="false"
-                            EnableNodeIcon="false"
-                            EnableNodeSelection="true" 
-                            EnableDragDrop="true" 
-                            EnableTreeLines="true"
-                            AutoPostBack="false"
-                            RelatedTrees="astvMyTree1" 
-                            OnOnSelectedNodeChanged="astvMyTree2_OnSelectedNodeChanged"
-                            EnableContextMenuAdd="false"
-                            OnNodeDragAndDropCompletedScript="dndCompletedHandler( elem, newParent )"
-                            OnNodeSelectedScript2="nodeSelectHandler(elem)"
-                            />
+                                
                     </td>
                 </tr>
             </table>
